@@ -170,10 +170,11 @@ plotly
 |--------|-------|
 | Telemetry simulation, anomaly injection, dataset assembly | Jisto Prakash |
 | Isolation Forest training, Z-Score evaluation, prediction | Devika P Dinesh |
-| Streamlit dashboard, visualizations | Jisto Prakash |
+| Streamlit dashboard, visualizations | Jisto Prakash, Devika P Dinesh |
 
 ---
 
 ## 📄 License
 
 This project is for academic/educational purposes.
+
