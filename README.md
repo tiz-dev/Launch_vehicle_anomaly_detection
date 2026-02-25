@@ -9,7 +9,7 @@
 This project builds a **telemetry anomaly detection system** for a simulated launch vehicle over a 14-day development plan.  
 It covers the full pipeline — from generating synthetic sensor data, injecting anomalies, detecting them with Z-Score and Isolation Forest, and finally presenting results on a Streamlit dashboard.
 
-**Author:** Jisto Prakash  
+**Author:** Jisto Prakash,Devika P Dinesh
 **Level:** Beginner  
 **Duration:** 14 Days  
 **Stack:** Python · NumPy · Pandas · Matplotlib · Scikit-Learn · Streamlit
@@ -140,3 +140,4 @@ streamlit
 ## 📄 License
 
 This project is for academic/educational purposes.
+
