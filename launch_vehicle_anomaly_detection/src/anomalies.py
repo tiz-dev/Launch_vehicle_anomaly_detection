@@ -136,6 +136,81 @@ def inject_drift(
     return corrupted
 
 
+def detect_zscore(
+    data: np.ndarray,
+    threshold: float = 3.0,
+) -> np.ndarray:
+    """
+    Detect anomalies in a 1-D signal using the Z-score method.
+
+    Model
+    -----
+    For each sample x_i, the Z-score measures how many standard
+    deviations it lies from the global mean:
+
+        z_i = (x_i - μ) / σ
+
+    where  μ = mean(data)  and  σ = std(data).
+
+    A sample is flagged as an anomaly when |z_i| > threshold.
+    The conventional threshold is 3 (i.e., outside ±3 σ), which
+    covers ~99.7 % of a normal distribution.
+
+    Parameters
+    ----------
+    data      : np.ndarray  – 1-D array of sensor readings.
+    threshold : float       – Minimum |z| to be called an anomaly.
+                              Default 3.0.
+
+    Returns
+    -------
+    anomaly_indices : np.ndarray  – Integer indices where |z| > threshold.
+                                    Empty array if none found.
+
+    Raises
+    ------
+    ValueError  – If `data` has zero length or zero standard deviation
+                  (a flat signal has no variation to score against).
+
+    Notes
+    -----
+    * The function uses **population** std (ddof=0) to match the
+      classic z-score formula.
+    * Both positive AND negative extremes are flagged (|z| > threshold).
+    * Use np.random.seed() before injecting anomalies for reproducible
+      demonstrations.
+
+    Examples
+    --------
+    >>> clean = np.zeros(100)
+    >>> clean[42] = 999          # obvious spike
+    >>> detect_zscore(clean)
+    array([42])
+    """
+    if len(data) == 0:
+        raise ValueError("data must be non-empty.")
+
+    mean = np.mean(data)
+    std  = np.std(data, ddof=0)
+
+    if std == 0.0:
+        raise ValueError(
+            "Standard deviation is zero — cannot compute Z-scores on a "
+            "constant (flat) signal."
+        )
+
+    z_scores = (data - mean) / std
+    anomaly_indices = np.where(np.abs(z_scores) > threshold)[0]
+
+    print(
+        f"[detect_zscore] μ={mean:.4f}  σ={std:.4f}  threshold=±{threshold}  "
+        f"→  {len(anomaly_indices)} anomaly sample(s) detected "
+        f"out of {len(data)} total."
+    )
+
+    return anomaly_indices
+
+
 # ---------------------------------------------------------------
 # Quick self-test / visual check when run directly
 # ---------------------------------------------------------------
