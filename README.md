@@ -1,18 +1,22 @@
 # 🚀 Launch Vehicle Telemetry Anomaly Detector
 
-> A beginner-friendly Python project that simulates rocket telemetry data and detects anomalies using statistical methods and machine learning.
+> A beginner-friendly Python project that simulates rocket telemetry data, injects realistic faults, and detects anomalies using statistical and machine learning methods — with a fully interactive Streamlit dashboard.
+
+![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python) ![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red?logo=streamlit) ![scikit-learn](https://img.shields.io/badge/scikit--learn-IsolationForest-orange) ![Status](https://img.shields.io/badge/Status-Complete-brightgreen)
 
 ---
 
 ## 📌 Project Overview
 
-This project builds a **telemetry anomaly detection system** for a simulated launch vehicle over a 14-day development plan.  
-It covers the full pipeline — from generating synthetic sensor data, injecting anomalies, detecting them with Z-Score and Isolation Forest, and finally presenting results on a Streamlit dashboard.
+This project builds a **telemetry anomaly detection system** for a simulated launch vehicle.  
+It covers the full ML pipeline — from generating synthetic sensor data and injecting anomalies, to detecting them with Z-Score and Isolation Forest, and presenting interactive results on a Streamlit dashboard.
 
-**Author:** Jisto Prakash,Devika P Dinesh
-**Level:** Beginner  
-**Duration:** 14 Days  
-**Stack:** Python · NumPy · Pandas · Matplotlib · Scikit-Learn · Streamlit
+| | |
+|---|---|
+| **Authors** | Jisto Prakash · Devika P Dinesh |
+| **Level** | Beginner |
+| **Duration** | 14 Days |
+| **Stack** | Python · NumPy · Pandas · Matplotlib · Scikit-Learn · Plotly · Streamlit |
 
 ---
 
@@ -24,50 +28,61 @@ Launch_vehicle_anomaly_detection/
 ├── launch_vehicle_anomaly_detection/
 │   ├── src/
 │   │   ├── day1_generator.py       # Synthetic telemetry data generation
-│   │   └── day2_physics.py         # Fuel tank pressure simulation (exponential decay)
+│   │   ├── day2_physics.py         # Fuel tank pressure simulation (exponential decay)
+│   │   ├── anomalies.py            # Anomaly injection (spikes + drift)
+│   │   ├── assemble_dataset.py     # Assembles train/test CSV datasets
+│   │   ├── train_iso_forest.py     # Trains Isolation Forest → models/iso_forest.pkl
+│   │   ├── eval_zscore.py          # Z-Score detection evaluation
+│   │   ├── predict_iso.py          # Isolation Forest inference + results CSV
+│   │   ├── make_test.py            # Test dataset builder
+│   │   ├── visualize_flight.py     # Static flight telemetry plots
+│   │   └── visualize_health.py     # Health & anomaly dashboard plots
 │   │
 │   ├── data/
-│   │   └── normal_telemetry.csv    # Generated telemetry data (auto-created)
+│   │   ├── normal_telemetry.csv    # Raw generated telemetry
+│   │   ├── train_normal.csv        # Clean training set
+│   │   ├── test_anomalies.csv      # Test set with injected anomalies
+│   │   └── iso_forest_results.csv  # Model predictions output
 │   │
+│   ├── models/
+│   │   └── iso_forest.pkl          # Trained Isolation Forest model
+│   │
+│   ├── plots/                      # Saved static PNG charts
+│   ├── app.py                      # Streamlit interactive dashboard
 │   └── requirements.txt            # Python dependencies
 │
 ├── project_plan.md                 # Full 14-day development roadmap
+├── modular_work_distribution.md    # Task split between Jisto & Devika
 └── README.md                       # You are here
 ```
 
 ---
 
-## 🗓️ Development Roadmap
+## ✅ Development Roadmap
 
-### Phase 1 — Data Simulation & Understanding (Days 1–3)
-| Day | File | Description |
-|-----|------|-------------|
-| ✅ Day 1 | `day1_generator.py` | Generates altitude, velocity & engine temperature using basic physics models. Saves to `normal_telemetry.csv`. |
-| ✅ Day 2 | `day2_physics.py` | Simulates fuel tank pressure using an **exponential decay model** with Gaussian noise. |
-| ⬜ Day 3 | `day3_anomaly_injector.py` | Injects point & drift anomalies into telemetry data. |
+### Phase 1 — Data Simulation (Days 1–3)
+| Day | File | Status | Description |
+|-----|------|--------|-------------|
+| Day 1 | `day1_generator.py` | ✅ Done | Generates altitude, velocity & engine temperature using basic physics models |
+| Day 2 | `day2_physics.py` | ✅ Done | Simulates fuel tank pressure via exponential decay with Gaussian noise |
+| Day 3 | `anomalies.py` | ✅ Done | Injects spike and drift anomalies into telemetry channels |
 
-### Phase 2 — Rule-Based Anomaly Detection (Days 4–6)
-| Day | File | Description |
-|-----|------|-------------|
-| ⬜ Day 4 | — | Statistical analysis: Mean & Standard Deviation |
-| ⬜ Day 5 | `day5_zscore.py` | Z-Score based anomaly flagging (threshold: ±3σ) |
-| ⬜ Day 6 | — | Visualize flagged anomalies on charts |
+### Phase 2 — Rule-Based Detection (Days 4–6)
+| Day | File | Status | Description |
+|-----|------|--------|-------------|
+| Day 4–5 | `assemble_dataset.py` | ✅ Done | Assembles clean train set and anomaly-injected test set |
+| Day 6 | `eval_zscore.py` | ✅ Done | Z-Score detection with evaluation across multiple thresholds |
 
 ### Phase 3 — Machine Learning: Isolation Forest (Days 7–10)
-| Day | File | Description |
-|-----|------|-------------|
-| ⬜ Day 7 | — | Concept: Isolation Forest |
-| ⬜ Day 8 | `day8_isolation_forest.py` | Train model on normal data, predict on anomaly data |
-| ⬜ Day 9 | — | Evaluate: Accuracy, Precision, Recall |
-| ⬜ Day 10 | — | Tune `contamination` parameter |
+| Day | File | Status | Description |
+|-----|------|--------|-------------|
+| Day 7–8 | `train_iso_forest.py` | ✅ Done | Trains Isolation Forest on normal data, saves model |
+| Day 9–10 | `predict_iso.py` | ✅ Done | Runs inference, evaluates TP/TN/FP/FN, saves results CSV |
 
 ### Phase 4 — Dashboard & Final Report (Days 11–14)
-| Day | File | Description |
-|-----|------|-------------|
-| ⬜ Day 11 | `app.py` | Setup Streamlit, display raw dataframe |
-| ⬜ Day 12 | `app.py` | Add interactive line charts |
-| ⬜ Day 13 | `app.py` | Integrate anomaly detection into dashboard |
-| ⬜ Day 14 | — | Final polish, demo, and submission |
+| Day | File | Status | Description |
+|-----|------|--------|-------------|
+| Day 11–14 | `app.py` | ✅ Done | Full interactive Streamlit dashboard with 4 pages |
 
 ---
 
@@ -75,44 +90,64 @@ Launch_vehicle_anomaly_detection/
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/Captdumbledore/Launch_vehicle_anomaly_detection.git
-cd Launch_vehicle_anomaly_detection
+git clone https://github.com/tiz-dev/Launch_vehicle_anomaly_detection.git
+cd Launch_vehicle_anomaly_detection/launch_vehicle_anomaly_detection
 ```
 
 ### 2. Install dependencies
 ```bash
-pip install -r launch_vehicle_anomaly_detection/requirements.txt
+pip install -r requirements.txt
+pip install plotly
 ```
 
-### 3. Run Day 1 — Generate Telemetry Data
+### 3. Run the pipeline (in order)
 ```bash
-python launch_vehicle_anomaly_detection/src/day1_generator.py
+python src/day1_generator.py       # Generate base telemetry
+python src/day2_physics.py         # Add physics channels
+python src/anomalies.py            # Inject anomalies
+python src/assemble_dataset.py     # Build train/test CSVs
+python src/train_iso_forest.py     # Train Isolation Forest
+python src/eval_zscore.py          # Evaluate Z-Score detection
+python src/predict_iso.py          # Run model predictions
+python src/visualize_flight.py     # (Optional) static plots
+python src/visualize_health.py     # (Optional) health plots
 ```
-Outputs: `launch_vehicle_anomaly_detection/data/normal_telemetry.csv`
 
-### 4. Run Day 2 — Simulate Fuel Tank Pressure
+### 4. Launch the dashboard
 ```bash
-python launch_vehicle_anomaly_detection/src/day2_physics.py
+python -m streamlit run app.py
 ```
+Opens at **http://localhost:8501**
 
 ---
 
-## 🧪 Physics Models Used
+## 📊 Dashboard Pages
 
-### Day 1 — Altitude & Velocity
-| Sensor | Model | Formula |
-|--------|-------|---------|
-| Altitude | Quadratic (constant acceleration) | `h = 0.25 × t²` |
-| Velocity | Linear + noise | `v = 0.5t + N(0, 1)` |
-| Engine Temp | Linear drift + noise | `T = 300 + 0.1t + N(0, 5)` |
+| Page | Description |
+|------|-------------|
+| 🏠 **Home** | Project overview, pipeline diagram, anomaly types |
+| 📊 **Dashboard** | Live metric cards, multi-channel telemetry viewer with anomaly overlays, channel distribution chart |
+| 🔍 **Anomaly Explorer** | Filterable anomaly event table, Z-score scatter plot |
+| 📈 **Model Comparison** | Side-by-side metrics, performance radar chart, confusion matrices |
 
-### Day 2 — Fuel Tank Pressure
-| Parameter | Value |
-|-----------|-------|
-| Initial Pressure (P₀) | 5000 units |
-| Model | Exponential decay: `P(t) = P₀ × e^(−k×t)` |
-| Decay Rate (k) | 0.008 |
-| Noise | Gaussian `N(0, 50)` |
+---
+
+## 🧪 Physics Models
+
+### Telemetry Channels
+| Channel | Model |
+|---------|-------|
+| Altitude | `h = 0.25 × t²` (quadratic, constant acceleration) |
+| Velocity | `v = 0.5t + N(0, 1)` (linear + noise) |
+| Engine Temp | `T = 300 + 0.1t + N(0, 5)` (linear drift + noise) |
+| Fuel Pressure | `P(t) = 5000 × e^(−0.008t) + N(0, 50)` (exponential decay) |
+| Vibration | Random Gaussian process |
+
+### Anomaly Types
+| Type | Description |
+|------|-------------|
+| **Spike** | Sudden, short-lived excursion (simulates sensor bit-flip or surge) |
+| **Drift** | Slow, cumulative bias (simulates calibration loss) |
 
 ---
 
@@ -124,20 +159,21 @@ pandas
 matplotlib
 scikit-learn
 streamlit
+plotly
 ```
 
 ---
 
-## 🚧 Constraints
+## 👥 Work Distribution
 
-- ✅ No advanced fluid dynamics or aerodynamics
-- ✅ No complex sensor correlations  
-- ✅ No real-time streaming — static CSV files only  
-- ✅ Beginner-friendly Python only
+| Module | Owner |
+|--------|-------|
+| Telemetry simulation, anomaly injection, dataset assembly | Jisto Prakash |
+| Isolation Forest training, Z-Score evaluation, prediction | Devika P Dinesh |
+| Streamlit dashboard, visualizations | Jisto Prakash |
 
 ---
 
 ## 📄 License
 
 This project is for academic/educational purposes.
-
