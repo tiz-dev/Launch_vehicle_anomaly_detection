@@ -251,6 +251,20 @@ def load_data():
     df["z_flag"] = z_flags.astype(int)
     df["z_score_max"] = z_scores_max
 
+    # Isolation Forest anomaly score (re-derive if missing)
+    if "iso_anomaly_score" not in df.columns:
+        try:
+            import joblib
+            model_path = os.path.join(MODEL_DIR, "iso_forest.pkl")
+            if os.path.exists(model_path):
+                _iso_model = joblib.load(model_path)
+                X = df[FEATURE_COLS].values
+                df["iso_anomaly_score"] = -_iso_model.score_samples(X)  # higher = more anomalous
+            else:
+                df["iso_anomaly_score"] = np.nan
+        except Exception:
+            df["iso_anomaly_score"] = np.nan
+
     metrics = {}
     gt = df["is_anomaly"].values
     iso_pred = df["iso_prediction"].values
@@ -619,7 +633,7 @@ def show_anomaly_explorer():
 
     st.markdown("---")
 
-    # Scatter: z_score_max vs channel value coloured by prediction
+    # ── Scatter: z_score_max vs channel value coloured by prediction ──────
     st.markdown('<div class="section-header">Z-Score Distribution</div>', unsafe_allow_html=True)
     ch_scatter = st.selectbox("Channel for scatter:", FEATURE_COLS, format_func=lambda x: CHANNEL_LABELS[x])
 
@@ -643,6 +657,203 @@ def show_anomaly_explorer():
             margin=dict(l=0, r=0, t=10, b=10),
         )
         st.plotly_chart(sc_fig, use_container_width=True)
+
+    st.markdown("---")
+
+    # ══════════════════════════════════════════════════════════════════
+    # ML MODEL — ISOLATION FOREST VISUALIZATIONS
+    # ══════════════════════════════════════════════════════════════════
+    st.markdown("""
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <div style="width:4px;height:32px;background:linear-gradient(180deg,#64ffda,#7eb3ff);border-radius:2px;"></div>
+      <div>
+        <div style="color:#e6f1ff;font-size:1.1rem;font-weight:700;letter-spacing:0.03em;">🤖 Isolation Forest — ML Model Insights</div>
+        <div style="color:#8892b0;font-size:0.8rem;">Anomaly scores and detections from the trained Isolation Forest model</div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    has_iso_score = "iso_anomaly_score" in df.columns and df["iso_anomaly_score"].notna().any()
+
+    if not has_iso_score:
+        st.warning("⚠️ Isolation Forest anomaly scores are not available. Ensure the model file exists at `models/iso_forest.pkl`.", icon="🤖")
+    else:
+        sdf2 = df.sample(min(3000, len(df)), random_state=7)
+
+        # ── Row 1: Score Distribution Histogram + Score vs Channel Scatter ──
+        col_hist, col_ch_sc = st.columns(2)
+
+        with col_hist:
+            st.markdown('<div class="section-header">Anomaly Score Distribution</div>', unsafe_allow_html=True)
+
+            normal_scores = df[df["iso_prediction"] == 0]["iso_anomaly_score"].dropna()
+            anom_scores   = df[df["iso_prediction"] == 1]["iso_anomaly_score"].dropna()
+
+            hist_fig = go.Figure()
+            hist_fig.add_trace(go.Histogram(
+                x=normal_scores,
+                name="Normal (ISO)",
+                marker_color="#64ffda",
+                opacity=0.65,
+                nbinsx=60,
+                hovertemplate="Score: %{x:.4f}<br>Count: %{y}<extra>Normal</extra>",
+            ))
+            hist_fig.add_trace(go.Histogram(
+                x=anom_scores,
+                name="Anomaly (ISO)",
+                marker_color="#ff4b4b",
+                opacity=0.75,
+                nbinsx=60,
+                hovertemplate="Score: %{x:.4f}<br>Count: %{y}<extra>Anomaly</extra>",
+            ))
+
+            # Decision boundary — typical split near the median of anomaly scores
+            if len(anom_scores) > 0 and len(normal_scores) > 0:
+                boundary = (normal_scores.max() + anom_scores.min()) / 2
+                hist_fig.add_vline(
+                    x=boundary, line_dash="dash", line_color="#ffd166", line_width=1.5,
+                    annotation_text="Decision boundary",
+                    annotation_font_color="#ffd166",
+                    annotation_position="top right",
+                )
+
+            hist_fig.update_layout(
+                barmode="overlay",
+                height=320,
+                **PLOTLY_THEME,
+                xaxis=dict(title="Anomaly Score (higher = more anomalous)",
+                           gridcolor="#1e3a5f", tickfont=dict(color="#8892b0")),
+                yaxis=dict(title="Count", gridcolor="#1e3a5f", tickfont=dict(color="#8892b0")),
+                legend=dict(font=dict(color="#8892b0"), bgcolor="rgba(0,0,0,0)",
+                            orientation="h", yanchor="bottom", y=1.0, xanchor="right", x=1),
+                margin=dict(l=0, r=0, t=30, b=10),
+            )
+            st.plotly_chart(hist_fig, use_container_width=True)
+
+        with col_ch_sc:
+            st.markdown('<div class="section-header">Score vs Channel (ISO Prediction)</div>', unsafe_allow_html=True)
+            ch_iso = st.selectbox(
+                "Channel:",
+                FEATURE_COLS,
+                format_func=lambda x: CHANNEL_LABELS[x],
+                key="iso_ch_select",
+            )
+
+            # Four groups: TP / TN / FP / FN for richer insight
+            group_colors = {
+                "True Positive":  "#ff4b4b",
+                "True Negative":  "#64ffda",
+                "False Positive": "#ffd166",
+                "False Negative": "#b58cf7",
+            }
+
+            def get_group(row):
+                if row["iso_prediction"] == 1 and row["is_anomaly"] == 1:
+                    return "True Positive"
+                elif row["iso_prediction"] == 0 and row["is_anomaly"] == 0:
+                    return "True Negative"
+                elif row["iso_prediction"] == 1 and row["is_anomaly"] == 0:
+                    return "False Positive"
+                else:
+                    return "False Negative"
+
+            sdf2["pred_group"] = sdf2.apply(get_group, axis=1)
+
+            iso_sc_fig = go.Figure()
+            for grp, color in group_colors.items():
+                mask = sdf2["pred_group"] == grp
+                if mask.any():
+                    iso_sc_fig.add_trace(go.Scatter(
+                        x=sdf2.loc[mask, ch_iso],
+                        y=sdf2.loc[mask, "iso_anomaly_score"],
+                        mode="markers",
+                        name=grp,
+                        marker=dict(color=color, size=4, opacity=0.65),
+                        hovertemplate=f"{grp}<br>{CHANNEL_LABELS[ch_iso]}: %{{x:.2f}}<br>Score: %{{y:.4f}}<extra></extra>",
+                    ))
+
+            iso_sc_fig.update_layout(
+                height=320,
+                **PLOTLY_THEME,
+                xaxis=dict(title=CHANNEL_LABELS[ch_iso], gridcolor="#1e3a5f", tickfont=dict(color="#8892b0")),
+                yaxis=dict(title="Anomaly Score", gridcolor="#1e3a5f", tickfont=dict(color="#8892b0")),
+                legend=dict(font=dict(color="#8892b0"), bgcolor="rgba(0,0,0,0)",
+                            orientation="h", yanchor="bottom", y=1.0, xanchor="right", x=1),
+                margin=dict(l=0, r=0, t=30, b=10),
+            )
+            st.plotly_chart(iso_sc_fig, use_container_width=True)
+
+        # ── Row 2: Anomaly Score Timeline ──────────────────────────────────
+        st.markdown('<div class="section-header">Anomaly Score Timeline</div>', unsafe_allow_html=True)
+
+        t_col = "time" if "time" in df.columns else None
+        t_vals = df[t_col].values if t_col else np.arange(len(df))
+        t_label = "Time (s)" if t_col else "Sample Index"
+
+        # Subsample for performance
+        step = max(1, len(df) // 3000)
+        t_sub   = t_vals[::step]
+        score_sub = df["iso_anomaly_score"].values[::step]
+        pred_sub  = df["iso_prediction"].values[::step]
+        gt_sub    = df["is_anomaly"].values[::step]
+
+        tl_fig = go.Figure()
+
+        # Score line — normal regions
+        tl_fig.add_trace(go.Scatter(
+            x=t_sub, y=score_sub,
+            mode="lines",
+            name="Anomaly Score",
+            line=dict(color="#7eb3ff", width=1.2),
+            opacity=0.8,
+            hovertemplate="Score: %{y:.4f}<extra>Anomaly Score</extra>",
+        ))
+
+        # Overlay ISO-flagged points
+        iso_mask = pred_sub == 1
+        if iso_mask.any():
+            tl_fig.add_trace(go.Scatter(
+                x=t_sub[iso_mask],
+                y=score_sub[iso_mask],
+                mode="markers",
+                name="ISO Detected",
+                marker=dict(color="#ff4b4b", size=5, symbol="circle"),
+                hovertemplate="Score: %{y:.4f}<extra>ISO Flagged</extra>",
+            ))
+
+        # Overlay ground-truth anomaly windows as a shaded band
+        gt_mask = gt_sub == 1
+        if gt_mask.any():
+            tl_fig.add_trace(go.Scatter(
+                x=t_sub[gt_mask],
+                y=score_sub[gt_mask],
+                mode="markers",
+                name="Ground Truth Anomaly",
+                marker=dict(color="#ffd166", size=4, symbol="diamond", opacity=0.7),
+                hovertemplate="Score: %{y:.4f}<extra>True Anomaly</extra>",
+            ))
+
+        tl_fig.update_layout(
+            height=300,
+            **PLOTLY_THEME,
+            xaxis=dict(title=t_label, gridcolor="#1e3a5f", tickfont=dict(color="#8892b0")),
+            yaxis=dict(title="Anomaly Score", gridcolor="#1e3a5f", tickfont=dict(color="#8892b0")),
+            legend=dict(font=dict(color="#8892b0"), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", yanchor="bottom", y=1.01, xanchor="right", x=1),
+            margin=dict(l=0, r=0, t=30, b=10),
+            hovermode="x unified",
+        )
+        st.plotly_chart(tl_fig, use_container_width=True)
+
+        # ── ISO summary stats ───────────────────────────────────────────────
+        st.markdown('<div class="section-header">Model Decision Summary</div>', unsafe_allow_html=True)
+        iso_m = metrics["iso"]
+        s_col1, s_col2, s_col3, s_col4, s_col5 = st.columns(5)
+        s_col1.metric("Avg Score (Normal)",  f"{df[df['iso_prediction']==0]['iso_anomaly_score'].mean():.4f}")
+        s_col2.metric("Avg Score (Anomaly)", f"{df[df['iso_prediction']==1]['iso_anomaly_score'].mean():.4f}")
+        s_col3.metric("True Positives",  f"{iso_m['TP']:,}")
+        s_col4.metric("False Positives", f"{iso_m['FP']:,}")
+        s_col5.metric("False Negatives", f"{iso_m['FN']:,}")
 
 
 # ══════════════════════════════════════════════════════════════════════════
